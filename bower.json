@@ -3,7 +3,7 @@
   "version": "0.0.37",
   "homepage": "http://ghiden.github.io/angucomplete-alt/",
   "authors": [
-    "Hidenari Nozaki <hidenari@gmail.com>"
+    "Adam M. Pere <adam@goinvo.com>"
   ],
   "description": "Autocomplete directive for AngularJS",
   "keywords": [

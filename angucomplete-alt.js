@@ -1,11 +1,11 @@
 /*
- * angucomplete-alt
+ * angucomplete-alt-table
  * Autocomplete directive for AngularJS
- * This is a fork of Daryl Rowland's angucomplete with some extra features.
- * By Hidenari Nozaki
+ * This is a fork of Daryl Rowland's angucomplete of the form of Hidenari Nozaki's angucomplete with added features.
+ * By Adam M. Pere, Involution Studios
  */
 
-/*! Copyright (c) 2014 Hidenari Nozaki and contributors | Licensed under the MIT license */
+/*! Copyright (c) 2015 Adam M. Pere (Involution Studios) and contributors | Licensed under the MIT license */
 
 'use strict';
 
@@ -45,23 +45,38 @@
     var TEXT_NORESULTS = 'No results found';
     var TEMPLATE_URL = '/angucomplete-alt/index.html';
 
-    // Set the default template for this directive
+//    // Set the default template for this directive
+//    $templateCache.put(TEMPLATE_URL,
+//        '<div class="angucomplete-holder" ng-class="{\'angucomplete-dropdown-visible\': showDropdown}">' +
+//        '  <input id="{{id}}_value" ng-model="searchStr" ng-disabled="disableInput" type="{{type}}" placeholder="{{placeholder}}" ng-focus="onFocusHandler()" class="{{inputClass}}" ng-focus="resetHideResults()" ng-blur="hideResults($event)" autocapitalize="off" autocorrect="off" autocomplete="off" ng-change="inputChangeHandler(searchStr)"/>' +
+//        '  <div id="{{id}}_dropdown" class="angucomplete-dropdown" ng-show="showDropdown">' +
+//        '    <div class="angucomplete-searching" ng-show="searching" ng-bind="textSearching"></div>' +
+//        '    <div class="angucomplete-searching" ng-show="!searching && (!results || results.length == 0)" ng-bind="textNoResults"></div>' +
+//        '    <div class="angucomplete-row" ng-repeat="result in results" ng-click="selectResult(result)" ng-mouseenter="hoverRow($index)" ng-class="{\'angucomplete-selected-row\': $index == currentIndex}">' +
+//        '      <div ng-if="imageField" class="angucomplete-image-holder">' +
+//        '        <img ng-if="result.image && result.image != \'\'" ng-src="{{result.image}}" class="angucomplete-image"/>' +
+//        '        <div ng-if="!result.image && result.image != \'\'" class="angucomplete-image-default"></div>' +
+//        '      </div>' +
+//        '      <div class="angucomplete-title" ng-if="matchClass" ng-bind-html="result.title"></div>' +
+//        '      <div class="angucomplete-title" ng-if="!matchClass"><span ng-repeat ="title in result.titleArray">{{ title }}</span></div>' +
+//        '      <div ng-if="matchClass && result.description && result.description != \'\'" class="angucomplete-description" ng-bind-html="result.description"></div>' +
+//        '      <div ng-if="!matchClass && result.description && result.description != \'\'" class="angucomplete-description">{{result.description}}</div>' +
+//        '    </div>' +
+//        '  </div>' +
+//        '</div>'
+//    );
+		
+		    // Set the default template for this directive
     $templateCache.put(TEMPLATE_URL,
         '<div class="angucomplete-holder" ng-class="{\'angucomplete-dropdown-visible\': showDropdown}">' +
         '  <input id="{{id}}_value" ng-model="searchStr" ng-disabled="disableInput" type="{{type}}" placeholder="{{placeholder}}" ng-focus="onFocusHandler()" class="{{inputClass}}" ng-focus="resetHideResults()" ng-blur="hideResults($event)" autocapitalize="off" autocorrect="off" autocomplete="off" ng-change="inputChangeHandler(searchStr)"/>' +
         '  <div id="{{id}}_dropdown" class="angucomplete-dropdown" ng-show="showDropdown">' +
         '    <div class="angucomplete-searching" ng-show="searching" ng-bind="textSearching"></div>' +
         '    <div class="angucomplete-searching" ng-show="!searching && (!results || results.length == 0)" ng-bind="textNoResults"></div>' +
-        '    <div class="angucomplete-row" ng-repeat="result in results" ng-click="selectResult(result)" ng-mouseenter="hoverRow($index)" ng-class="{\'angucomplete-selected-row\': $index == currentIndex}">' +
-        '      <div ng-if="imageField" class="angucomplete-image-holder">' +
-        '        <img ng-if="result.image && result.image != \'\'" ng-src="{{result.image}}" class="angucomplete-image"/>' +
-        '        <div ng-if="!result.image && result.image != \'\'" class="angucomplete-image-default"></div>' +
-        '      </div>' +
-        '      <div class="angucomplete-title" ng-if="matchClass" ng-bind-html="result.title"></div>' +
-        '      <div class="angucomplete-title" ng-if="!matchClass">{{ result.title }}</div>' +
-        '      <div ng-if="matchClass && result.description && result.description != \'\'" class="angucomplete-description" ng-bind-html="result.description"></div>' +
-        '      <div ng-if="!matchClass && result.description && result.description != \'\'" class="angucomplete-description">{{result.description}}</div>' +
-        '    </div>' +
+		'	 <table class = "{{id}}_dropdown"><tbody>' +
+        '    <tr class="angucomplete-row {{id}}_dropdown" ng-repeat="result in results | orderBy:\'sort\'" ng-click="selectResult(result)" ng-mouseenter="hoverRow($index)" ng-class="{\'angucomplete-selected-row\': $index == currentIndex}">' +
+        '	 	<td class = "{{id}}_dropdown"  ng-repeat = "title in result.titleArray" ng-bind-html="title"></td>' +
+        '    </tr></tbody></table>' +
         '  </div>' +
         '</div>'
     );
@@ -115,10 +130,12 @@
         var dd = elem[0].querySelector('.angucomplete-dropdown');
         var isScrollOn = false;
         var mousedownOn = null;
+		var mouseClassDownOn = null;
         var unbindInitialValue;
 
         elem.on('mousedown', function(event) {
           mousedownOn = event.target.id;
+		  mouseClassDownOn = event.target.className;
         });
 
         scope.currentIndex = null;
@@ -185,17 +202,29 @@
           // split title fields and run extractValue for each and join with ' '
           return scope.titleField.split(',')
             .map(function(field) {
-              return extractValue(data, field);
+              return extractValue(data, field);  //*** Note for ADAM ***
             })
             .join(' ');
         }
+		  
+		function extractTitles(data) {
+			return scope.titleField.split(',')
+            .map(function(field) {
+              return extractValue(data, field);  //*** Note for ADAM ***
+            });	
+		}
 
         function extractValue(obj, key) {
           var keys, result;
           if (key) {
             keys= key.split('.');
             result = obj;
-            keys.forEach(function(k) { result = result[k]; });
+            keys.forEach(function(k) { 
+				result = result[k];
+				if(result === null) {
+					result = " ";
+				}
+			});
           }
           else {
             result = obj;
@@ -219,6 +248,20 @@
           }
           return $sce.trustAsHtml(result);
         }
+		  
+		 function findMatchStrings(targetArray, str) {
+			 var l = targetArray.length;
+			 var resultArray = [];
+			 var temp = '';
+			 
+			 for(var i = 0; i < l; i++) {
+				 temp = findMatchString(targetArray[i], str);
+				 if(temp && temp !== undefined && temp !== null) {
+				 	resultArray.push(temp);
+				 }
+			 }
+			  return resultArray;
+        }
 
         function handleRequired(valid) {
           validState = scope.searchStr;
@@ -236,6 +279,27 @@
 
           if (which === KEY_UP || which === KEY_EN) {
             event.preventDefault();
+			if(which === KEY_EN) {
+				if (!scope.searchStr || scope.searchStr === '') {
+				  scope.showDropdown = false;
+				} else if (scope.searchStr.length > 0) {
+				  initResults();
+
+				  if (searchTimer) {
+					$timeout.cancel(searchTimer);
+				  }
+
+				  scope.searching = true;
+
+				  searchTimer = $timeout(function() {
+					searchTimerComplete(scope.searchStr);
+				  }, scope.pause);
+				}
+
+				if (validState && validState !== scope.searchStr && !scope.clearSelected) {
+				  callOrAssign(undefined);
+				}
+			}
           }
           else if (which === KEY_DW) {
             event.preventDefault();
@@ -502,14 +566,17 @@
         }
 
         function processResults(responseData, str) {
-          var i, description, image, text, formattedText, formattedDesc;
+          var i, description, image, text, formattedText, formattedDesc, titlesArray;
 
           if (responseData && responseData.length > 0) {
             scope.results = [];
 
             for (i = 0; i < responseData.length; i++) {
               if (scope.titleField && scope.titleField !== '') {
-                text = formattedText = extractTitle(responseData[i]);
+                text = formattedText = extractTitle(responseData[i]); //***
+				  titlesArray = extractTitles(responseData[i]);
+				  titlesArray[0] = titlesArray[0] + ' ' + titlesArray[1];
+				  titlesArray.splice(1, 1);
               }
 
               description = '';
@@ -525,14 +592,24 @@
               if (scope.matchClass) {
                 formattedText = findMatchString(text, str);
                 formattedDesc = findMatchString(description, str);
+				  titlesArray = findMatchStrings(titlesArray, str);
               }
-
-              scope.results[scope.results.length] = {
-                title: formattedText,
-                description: formattedDesc,
-                image: image,
-                originalObject: responseData[i]
-              };
+				
+			  scope.results[scope.results.length] = {
+				title: formattedText,
+				titleArray: titlesArray,
+				description: formattedDesc,
+				image: image,
+				originalObject: responseData[i],
+				sort: function() {
+					if(respresponseData[i] && responseData[i].LastName) {
+						return responseData[i].LastName.replace(/ /g,'').toLowerCase();
+					}
+					else {
+						return "";	
+					}
+				}
+			  };
 
               if (scope.autoMatch) {
                 checkExactMatch(scope.results[scope.results.length-1],
@@ -552,8 +629,9 @@
         };
 
         scope.hideResults = function(event) {
-          if (mousedownOn === scope.id + '_dropdown') {
+          if (mousedownOn === scope.id + '_dropdown' || (mouseClassDownOn && mouseClassDownOn.indexOf('add-study-staff_dropdown') >= 0)) {
             mousedownOn = null;
+		    mouseClassDownOn = null;
           }
           else {
             hideTimer = $timeout(function() {
@@ -592,6 +670,8 @@
           // Restore original values
           if (scope.matchClass) {
             result.title = extractTitle(result.originalObject);
+			result.sort = result.originalObject.LastName.replace(/ /g,'').toLowerCase();
+			result.titleArray = extractTitles(result.originalObject);
             result.description = extractValue(result.originalObject, scope.descriptionField);
           }
 
@@ -599,10 +679,11 @@
             scope.searchStr = null;
           }
           else {
-            scope.searchStr = result.title;
+            scope.searchStr = null;
           }
           callOrAssign(result);
           clearResults();
+		  scope.hideResults();
         };
 
         scope.inputChangeHandler = function(str) {
